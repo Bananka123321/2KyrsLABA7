@@ -84,9 +84,9 @@ jobs:
           git clone https://github.com/microsoft/vcpkg.git C:/vcpkg
           C:/vcpkg/bootstrap-vcpkg.bat
 
-      - name: Install dependencies (Static linking)
+      - name: Install dependencies
         run: |
-          C:/vcpkg/vcpkg install boost-filesystem boost-system boost-program-options openssl zlib --triplet x64-windows-static
+          C:/vcpkg/vcpkg install boost-filesystem boost-system boost-program-options openssl zlib --triplet x64-windows
 
       - name: Configure
         run: cmake -G "Visual Studio 17 2022" -A x64 -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
@@ -94,11 +94,27 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
+      - name: Copy DLLs to build directory
+        run: |
+          copy "C:\vcpkg\installed\x64-windows\bin\boost_filesystem-vc143-mt-x64-1_89.dll" build\Release\
+          copy "C:\vcpkg\installed\x64-windows\bin\boost_program_options-vc143-mt-x64-1_89.dll" build\Release\
+          copy "C:\vcpkg\installed\x64-windows\bin\boost_system-vc143-mt-x64-1_89.dll" build\Release\
+          copy "C:\vcpkg\installed\x64-windows\bin\libcrypto-3-x64.dll" build\Release\
+          copy "C:\vcpkg\installed\x64-windows\bin\libssl-3-x64.dll" build\Release\
+
       - name: Run test
         run: build/Release/LAB7.exe --help
 
-      - name: Package (Windows)
-        run: cmake --install build --config Release --prefix package && cpack -G ZIP -C Release --config build/CPackConfig.cmake
+      - name: Package (Windows) - with DLLs
+        run: |
+          cmake --install build --config Release --prefix package
+          # Копируем DLL в папку package/bin
+          copy "C:\vcpkg\installed\x64-windows\bin\boost_filesystem-vc143-mt-x64-1_89.dll" package\bin\
+          copy "C:\vcpkg\installed\x64-windows\bin\boost_program_options-vc143-mt-x64-1_89.dll" package\bin\
+          copy "C:\vcpkg\installed\x64-windows\bin\boost_system-vc143-mt-x64-1_89.dll" package\bin\
+          copy "C:\vcpkg\installed\x64-windows\bin\libcrypto-3-x64.dll" package\bin\
+          copy "C:\vcpkg\installed\x64-windows\bin\libssl-3-x64.dll" package\bin\
+          cpack -G ZIP -C Release --config build/CPackConfig.cmake
 
       - name: Upload Windows package
         uses: softprops/action-gh-release@v1
