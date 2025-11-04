@@ -84,9 +84,9 @@ jobs:
           git clone https://github.com/microsoft/vcpkg.git C:/vcpkg
           C:/vcpkg/bootstrap-vcpkg.bat
 
-      - name: Install dependencies
+      - name: Install dependencies (Static linking)
         run: |
-          C:/vcpkg/vcpkg install boost-filesystem boost-system boost-program-options openssl zlib --triplet x64-windows
+          C:/vcpkg/vcpkg install boost-filesystem boost-system boost-program-options openssl zlib --triplet x64-windows-static
 
       - name: Configure
         run: cmake -G "Visual Studio 17 2022" -A x64 -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
@@ -94,8 +94,8 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
-      - name: Run
-        run: build/Release/LAB7.exe
+      - name: Run test
+        run: build/Release/LAB7.exe --help
 
       - name: Package (Windows)
         run: cmake --install build --config Release --prefix package && cpack -G ZIP -C Release --config build/CPackConfig.cmake
