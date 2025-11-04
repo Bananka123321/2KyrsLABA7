@@ -48,6 +48,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libboost-all-dev zlib1g-dev libssl-dev cmake ninja-build
+
       - name: Configure
         run: cmake -G "Ninja" -S . -B build -DCMAKE_BUILD_TYPE=Release
 
@@ -74,8 +79,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Install dependencies
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+          C:\vcpkg\bootstrap-vcpkg.bat
+          C:\vcpkg\vcpkg install boost-filesystem boost-system boost-program-options zlib openssl
+        shell: cmd
+
       - name: Configure
-        run: cmake -G "Ninja" -S . -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -G "Ninja" -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build --config Release
