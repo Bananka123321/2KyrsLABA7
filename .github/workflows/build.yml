@@ -79,14 +79,18 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Setup vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git C:/vcpkg
+          C:/vcpkg/bootstrap-vcpkg.bat
+
       - name: Install dependencies
         run: |
-          choco install -y boost msys2 openssl zlib
-          refreshenv
+          C:/vcpkg/vcpkg install boost-filesystem boost-system boost-program-options openssl zlib --triplet x64-windows
 
       - name: Configure
-        run: cmake -G "Ninja" -S . -B build -DCMAKE_BUILD_TYPE=Release -DBOOST_ROOT="C:/Program Files/boost" -DOPENSSL_ROOT_DIR="C:/Program Files/OpenSSL-Win64" -DZLIB_ROOT="C:/Program Files/Zlib"
-        
+        run: cmake -G "Ninja" -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release
+
       - name: Build
         run: cmake --build build --config Release
 
