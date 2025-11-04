@@ -81,14 +81,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
-          C:\vcpkg\bootstrap-vcpkg.bat
-          C:\vcpkg\vcpkg install boost-filesystem boost-system boost-program-options zlib openssl
-        shell: cmd
+          choco install -y boost msys2 openssl zlib
+          refreshenv
 
       - name: Configure
-        run: cmake -G "Ninja" -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release
-
+        run: cmake -G "Ninja" -S . -B build -DCMAKE_BUILD_TYPE=Release -DBOOST_ROOT="C:/Program Files/boost" -DOPENSSL_ROOT_DIR="C:/Program Files/OpenSSL-Win64" -DZLIB_ROOT="C:/Program Files/Zlib"
+        
       - name: Build
         run: cmake --build build --config Release
 
