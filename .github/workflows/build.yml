@@ -89,16 +89,16 @@ jobs:
           C:/vcpkg/vcpkg install boost-filesystem boost-system boost-program-options openssl zlib --triplet x64-windows
 
       - name: Configure
-        run: cmake -G "Ninja" -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release
+        run: cmake -G "Visual Studio 17 2022" -A x64 -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
 
       - name: Build
         run: cmake --build build --config Release
 
       - name: Run
-        run: build/LAB7.exe
+        run: build/Release/LAB7.exe
 
       - name: Package (Windows)
-        run: cmake --install build --prefix package && cpack -G ZIP --config build/CPackConfig.cmake
+        run: cmake --install build --config Release --prefix package && cpack -G ZIP -C Release --config build/CPackConfig.cmake
 
       - name: Upload Windows package
         uses: softprops/action-gh-release@v1
