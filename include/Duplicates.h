@@ -4,6 +4,8 @@
 #include <vector>
 #include "Parser.h"
 #include "FileHash.h"
+#include <unordered_map>
+#include <cstdint>        
 
 namespace bf = boost::filesystem;
 

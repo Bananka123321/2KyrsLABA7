@@ -14,7 +14,12 @@ set(CPACK_PACKAGE_NAME "LAB7")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 
 if(WIN32)
-    set(CPACK_GENERATOR "ZIP")
+    target_compile_definitions(LAB7 PRIVATE BOOST_ALL_NO_LIB _CRT_SECURE_NO_WARNINGS)
+    if(MSVC)
+        target_compile_options(LAB7 PRIVATE /W4)
+    else()
+        target_compile_options(LAB7 PRIVATE -Wall -Wextra)
+    endif()
 endif()
 
 if(UNIX AND NOT APPLE)
