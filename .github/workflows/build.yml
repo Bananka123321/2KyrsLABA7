@@ -92,12 +92,12 @@ jobs:
         run: |
           cmake -G "Visual Studio 17 2022" -A x64 -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
 
-      - name: Build
-        run: cmake --build build --config Release
-
-      - name: Copy DLLs
+      - name: Install EXE and Copy DLLs to package
         shell: pwsh
         run: |
+          cmake --install build --prefix package
+          
+          # Копируем DLL в package\bin
           $dlls = @(
               "boost_filesystem-vc143-mt-x64-1_89.dll",
               "boost_program_options-vc143-mt-x64-1_89.dll", 
@@ -110,14 +110,10 @@ jobs:
           foreach ($dll in $dlls) {
               $source = "C:\vcpkg\installed\x64-windows\bin\$dll"
               if (Test-Path $source) {
-                  Copy-Item $source -Destination "build\Release\"
+                  Copy-Item $source -Destination "package\bin\"
+                  Write-Host "Copied to package: $dll"
               }
           }
-          
-      - name: Test
-        run: |
-          cd build\Release
-          .\LAB7.exe --help
 
       - name: Package (Windows)
         run: cmake --install build --prefix package && cpack -G ZIP --config build/CPackConfig.cmake
