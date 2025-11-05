@@ -95,17 +95,10 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
-      - name: Copy ALL required DLLs to build directory
+      - name: Copy DLLs
         shell: pwsh
         run: |
-          if (!(Test-Path "build\Release")) {
-              New-Item -ItemType Directory -Path "build\Release" -Force
-          }
-          
-          $sourceDir = "C:\vcpkg\installed\x64-windows\bin\"
-          
-          # Копируем ВСЕ необходимые DLL
-          $requiredDlls = @(
+          $dlls = @(
               "boost_filesystem-vc143-mt-x64-1_89.dll",
               "boost_program_options-vc143-mt-x64-1_89.dll", 
               "boost_system-vc143-mt-x64-1_89.dll",
@@ -114,52 +107,20 @@ jobs:
               "zlib1.dll"
           )
           
-          foreach ($dll in $requiredDlls) {
-              $sourcePath = Join-Path $sourceDir $dll
-              if (Test-Path $sourcePath) {
-                  Copy-Item $sourcePath -Destination "build\Release\"
-                  Write-Host "Copied: $dll"
-              } else {
-                  Write-Warning "NOT FOUND: $dll"
+          foreach ($dll in $dlls) {
+              $source = "C:\vcpkg\installed\x64-windows\bin\$dll"
+              if (Test-Path $source) {
+                  Copy-Item $source -Destination "build\Release\"
               }
           }
           
-          Write-Host "Final DLLs in build\Release:"
-          Get-ChildItem "build\Release\*.dll" | Select-Object Name
-
-      - name: Test executable with DLLs
+      - name: Test
         run: |
           cd build\Release
           .\LAB7.exe --help
 
-      - name: Create distribution directory
-        shell: pwsh
-        run: |
-          # Создаем папку дистрибутива
-          $distDir = "dist"
-          New-Item -ItemType Directory -Path $distDir -Force
-          
-          # Копируем ВСЕ файлы из build/Release в dist
-          Copy-Item "build\Release\*" -Destination $distDir -Recurse -Force
-          
-          Write-Host "Files in distribution directory:"
-          Get-ChildItem $distDir | Select-Object Name
-
-      - name: Create ZIP package manually
-        shell: pwsh
-        run: |
-          $version = "0.1.0"  # Используем версию из CMake или можно получить из тега
-          $zipName = "LAB7-$version-win64.zip"
-          
-          # Создаем ZIP архив вручную, включая ВСЕ файлы
-          Compress-Archive -Path "dist\*" -DestinationPath $zipName -Force
-          
-          Write-Host "Created package: $zipName"
-          Write-Host "Contents of ZIP:"
-          Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $zip = [System.IO.Compression.ZipFile]::OpenRead($zipName)
-          $zip.Entries | Select-Object Name
-          $zip.Dispose()
+      - name: Package (Windows)
+        run: cmake --install build --prefix package && cpack -G ZIP --config build/CPackConfig.cmake
 
       - name: Upload Windows package
         uses: softprops/action-gh-release@v1
