@@ -88,10 +88,6 @@ jobs:
         run: |
           C:/vcpkg/vcpkg install boost-filesystem boost-system boost-program-options openssl zlib
 
-      - name: List vcpkg files (for debugging)
-        run: |
-          dir "C:\vcpkg\installed\x64-windows\bin\"
-
       - name: Configure
         run: |
           cmake -G "Visual Studio 17 2022" -A x64 -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
@@ -99,73 +95,71 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
-      - name: Copy DLLs to build directory (flexible)
+      - name: Copy ALL required DLLs to build directory
         shell: pwsh
         run: |
-          # Создаем папку если не существует
           if (!(Test-Path "build\Release")) {
               New-Item -ItemType Directory -Path "build\Release" -Force
           }
           
-          # Копируем файлы по шаблону
           $sourceDir = "C:\vcpkg\installed\x64-windows\bin\"
           
-          # Ищем файлы по шаблону и копируем их
-          $patterns = @(
-              "boost_filesystem*",
-              "boost_program_options*", 
-              "boost_system*",
-              "libcrypto*",
-              "libssl*", 
-              "zlib*"
+          # Копируем ВСЕ необходимые DLL
+          $requiredDlls = @(
+              "boost_filesystem-vc143-mt-x64-1_89.dll",
+              "boost_program_options-vc143-mt-x64-1_89.dll", 
+              "boost_system-vc143-mt-x64-1_89.dll",
+              "libcrypto-3-x64.dll",
+              "libssl-3-x64.dll",
+              "zlib1.dll"
           )
           
-          foreach ($pattern in $patterns) {
-              $files = Get-ChildItem -Path $sourceDir -Filter $pattern -ErrorAction SilentlyContinue
-              if ($files) {
-                  foreach ($file in $files) {
-                      Copy-Item $file.FullName -Destination "build\Release\"
-                      Write-Host "Copied: $($file.Name)"
-                  }
+          foreach ($dll in $requiredDlls) {
+              $sourcePath = Join-Path $sourceDir $dll
+              if (Test-Path $sourcePath) {
+                  Copy-Item $sourcePath -Destination "build\Release\"
+                  Write-Host "Copied: $dll"
               } else {
-                  Write-Warning "No files found for pattern: $pattern"
+                  Write-Warning "NOT FOUND: $dll"
               }
           }
           
-          # Проверяем, что скопировались нужные файлы
-          Write-Host "Files in build\Release:"
-          Get-ChildItem "build\Release\"
+          Write-Host "Final DLLs in build\Release:"
+          Get-ChildItem "build\Release\*.dll" | Select-Object Name
 
-      - name: Run test
-        run: build/Release/LAB7.exe --help
+      - name: Test executable with DLLs
+        run: |
+          cd build\Release
+          .\LAB7.exe --help
 
-      - name: Package (Windows) with DLLs
+      - name: Create distribution directory
         shell: pwsh
         run: |
-          cmake --install build --config Release --prefix package
+          # Создаем папку дистрибутива
+          $distDir = "dist"
+          New-Item -ItemType Directory -Path $distDir -Force
           
-          # Копируем DLL в пакет
-          $sourceDir = "C:\vcpkg\installed\x64-windows\bin\"
-          $patterns = @(
-              "boost_filesystem*",
-              "boost_program_options*",
-              "boost_system*", 
-              "libcrypto*",
-              "libssl*",
-              "zlib*"
-          )
+          # Копируем ВСЕ файлы из build/Release в dist
+          Copy-Item "build\Release\*" -Destination $distDir -Recurse -Force
           
-          foreach ($pattern in $patterns) {
-              $files = Get-ChildItem -Path $sourceDir -Filter $pattern -ErrorAction SilentlyContinue
-              if ($files) {
-                  foreach ($file in $files) {
-                      Copy-Item $file.FullName -Destination "package\bin\"
-                      Write-Host "Copied to package: $($file.Name)"
-                  }
-              }
-          }
+          Write-Host "Files in distribution directory:"
+          Get-ChildItem $distDir | Select-Object Name
+
+      - name: Create ZIP package manually
+        shell: pwsh
+        run: |
+          $version = "0.1.0"  # Используем версию из CMake или можно получить из тега
+          $zipName = "LAB7-$version-win64.zip"
           
-          cpack -G ZIP -C Release --config build/CPackConfig.cmake
+          # Создаем ZIP архив вручную, включая ВСЕ файлы
+          Compress-Archive -Path "dist\*" -DestinationPath $zipName -Force
+          
+          Write-Host "Created package: $zipName"
+          Write-Host "Contents of ZIP:"
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [System.IO.Compression.ZipFile]::OpenRead($zipName)
+          $zip.Entries | Select-Object Name
+          $zip.Dispose()
 
       - name: Upload Windows package
         uses: softprops/action-gh-release@v1
