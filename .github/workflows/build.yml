@@ -86,34 +86,85 @@ jobs:
 
       - name: Install dependencies
         run: |
-          C:/vcpkg/vcpkg install boost-filesystem boost-system boost-program-options openssl zlib --triplet x64-windows
+          C:/vcpkg/vcpkg install boost-filesystem boost-system boost-program-options openssl zlib
+
+      - name: List vcpkg files (for debugging)
+        run: |
+          dir "C:\vcpkg\installed\x64-windows\bin\"
 
       - name: Configure
-        run: cmake -G "Visual Studio 17 2022" -A x64 -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+        run: |
+          cmake -G "Visual Studio 17 2022" -A x64 -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
 
       - name: Build
         run: cmake --build build --config Release
 
-      - name: Copy DLLs to build directory
+      - name: Copy DLLs to build directory (flexible)
+        shell: pwsh
         run: |
-          copy "C:\vcpkg\installed\x64-windows\bin\boost_filesystem-vc143-mt-x64-1_89.dll" build\Release\
-          copy "C:\vcpkg\installed\x64-windows\bin\boost_program_options-vc143-mt-x64-1_89.dll" build\Release\
-          copy "C:\vcpkg\installed\x64-windows\bin\boost_system-vc143-mt-x64-1_89.dll" build\Release\
-          copy "C:\vcpkg\installed\x64-windows\bin\libcrypto-3-x64.dll" build\Release\
-          copy "C:\vcpkg\installed\x64-windows\bin\libssl-3-x64.dll" build\Release\
+          # Создаем папку если не существует
+          if (!(Test-Path "build\Release")) {
+              New-Item -ItemType Directory -Path "build\Release" -Force
+          }
+          
+          # Копируем файлы по шаблону
+          $sourceDir = "C:\vcpkg\installed\x64-windows\bin\"
+          
+          # Ищем файлы по шаблону и копируем их
+          $patterns = @(
+              "boost_filesystem*",
+              "boost_program_options*", 
+              "boost_system*",
+              "libcrypto*",
+              "libssl*", 
+              "zlib*"
+          )
+          
+          foreach ($pattern in $patterns) {
+              $files = Get-ChildItem -Path $sourceDir -Filter $pattern -ErrorAction SilentlyContinue
+              if ($files) {
+                  foreach ($file in $files) {
+                      Copy-Item $file.FullName -Destination "build\Release\"
+                      Write-Host "Copied: $($file.Name)"
+                  }
+              } else {
+                  Write-Warning "No files found for pattern: $pattern"
+              }
+          }
+          
+          # Проверяем, что скопировались нужные файлы
+          Write-Host "Files in build\Release:"
+          Get-ChildItem "build\Release\"
 
       - name: Run test
         run: build/Release/LAB7.exe --help
 
-      - name: Package (Windows) - with DLLs
+      - name: Package (Windows) with DLLs
+        shell: pwsh
         run: |
           cmake --install build --config Release --prefix package
-          # Копируем DLL в папку package/bin
-          copy "C:\vcpkg\installed\x64-windows\bin\boost_filesystem-vc143-mt-x64-1_89.dll" package\bin\
-          copy "C:\vcpkg\installed\x64-windows\bin\boost_program_options-vc143-mt-x64-1_89.dll" package\bin\
-          copy "C:\vcpkg\installed\x64-windows\bin\boost_system-vc143-mt-x64-1_89.dll" package\bin\
-          copy "C:\vcpkg\installed\x64-windows\bin\libcrypto-3-x64.dll" package\bin\
-          copy "C:\vcpkg\installed\x64-windows\bin\libssl-3-x64.dll" package\bin\
+          
+          # Копируем DLL в пакет
+          $sourceDir = "C:\vcpkg\installed\x64-windows\bin\"
+          $patterns = @(
+              "boost_filesystem*",
+              "boost_program_options*",
+              "boost_system*", 
+              "libcrypto*",
+              "libssl*",
+              "zlib*"
+          )
+          
+          foreach ($pattern in $patterns) {
+              $files = Get-ChildItem -Path $sourceDir -Filter $pattern -ErrorAction SilentlyContinue
+              if ($files) {
+                  foreach ($file in $files) {
+                      Copy-Item $file.FullName -Destination "package\bin\"
+                      Write-Host "Copied to package: $($file.Name)"
+                  }
+              }
+          }
+          
           cpack -G ZIP -C Release --config build/CPackConfig.cmake
 
       - name: Upload Windows package
