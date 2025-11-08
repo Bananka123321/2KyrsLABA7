@@ -29,13 +29,16 @@ bool Duplicates::bEqual(const bf::path& file1, const bf::path& file2) {
         if (bytes_read1 == 0)
             break;
 
-        std::size_t hash1 = hasher.hashBlockCRC32(buffer1, bytes_read1);
-        std::size_t hash2 = hasher.hashBlockCRC32(buffer2, bytes_read2);
+            std::size_t hash1;
+            std::size_t hash2;
 
-        if (config__.algorithm == Parser::HashAlgorithm::MD5) {
-            hash1 = hasher.hashBlockMD5(buffer1, bytes_read1);
-            hash2 = hasher.hashBlockMD5(buffer2, bytes_read2);
-        }
+            if (config__.algorithm == Parser::HashAlgorithm::MD5) {
+                hash1 = hasher.hashBlockMD5(buffer1, bytes_read1);
+                hash2 = hasher.hashBlockMD5(buffer2, bytes_read2);
+            }
+
+            hash1 = hasher.hashBlockCRC32(buffer1, bytes_read1);
+            hash2 = hasher.hashBlockCRC32(buffer2, bytes_read2);
 
         if (hash1 != hash2)
             return false;
@@ -58,8 +61,6 @@ void Duplicates::find() {
         std::vector<bool> checked(group.size(), false);
 
         for (size_t i = 0; i < group.size(); ++i) {
-            if (checked[i]) continue;
-
             std::vector<bf::path> dup_group{group[i]};
             for (size_t j = i + 1; j < group.size(); ++j) {
                 if (checked[j]) continue;

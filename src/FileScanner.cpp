@@ -3,9 +3,8 @@
 FileScanner::FileScanner(const Parser::Console& config) : config__(config) {}
 
 bool FileScanner::bEx(const bf::path& dir){
-    std::string path_str = dir.string();
     for (const auto& ex : config__.exclude_dirs) {
-        if (path_str.find(ex) != std::string::npos)
+        if (dir.string().find(ex) != std::string::npos)
             return true;
     }
     return false;

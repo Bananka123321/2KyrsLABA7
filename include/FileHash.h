@@ -11,7 +11,7 @@ namespace bf = boost::filesystem;
 
 class FileHash {
 public:
-    explicit FileHash(Parser::HashAlgorithm alg);
+    FileHash(Parser::HashAlgorithm alg);
 
     std::size_t hashBlockCRC32(const std::vector<char>& buffer, std::streamsize bytes_read);
     std::size_t hashBlockMD5(const std::vector<char>& buffer, std::streamsize bytes_read);
